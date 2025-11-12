@@ -1,3 +1,65 @@
+const hexstr = (str) => str.length % 2 == 0 ? str : `${str}0`;
+
+const datafromhex = (str) => {
+  const a = Uint8Array.fromHex(hexstr(str));
+  const res = [];
+  let i = 0;
+  for (let y = 0; y < 8; y++) {
+    const row = [];
+    for (let x = 0; x < 8; x += 4) {
+      const v = a[i] || 0;
+      row.push(v >> 6);
+      row.push((v >> 4) & 0b00000011);
+      row.push((v >> 2) & 0b00000011);
+      row.push(v & 0b00000011);
+      i++;
+    }
+    res.push(row);
+  }
+  return res;
+};
+
+const palfromhex = (str) => {
+  const a = Uint8Array.fromHex(hexstr(str));
+  const res = [];
+  let i = 0;
+  for (let x = 0; x < 8; x++) {
+    const v = a[i] || 0;
+    res.push(v >> 4);
+    res.push(v & 0b00001111);
+    i++;
+  }
+  return res;
+};
+
+const fullpal =
+  [
+    "#000000", "#1D2B53", "#7E2553", "#008751",
+    "#AB5236", "#5F574F", "#C2C3C7", "#FFF1E8",
+    "#FF004D", "#FFA300", "#FFEC27", "#00E436",
+    "#29ADFF", "#83769C", "#FF77A8", "#FFCCAA"];
+
+const offcanvas = new OffscreenCanvas(256, 256);
+const offctx = offcanvas.getContext("2d");
+offctx.imageSmoothingEnabled = false;
+
+const rendersprite = (ctx, x, y, palhex, transparent, sprhex) => {
+  const pal = palfromhex(palhex);
+  const data = datafromhex(sprhex);
+  ctx.clearRect(0, 0, 8, 8);
+  data.forEach(
+    (row, y) => row.forEach(
+        (i, x) => {
+          if (i > 0 || !transparent) {
+            ctx.fillStyle = fullpal[pal[i]];
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+    ));
+};
+
+rendersprite(offctx, 0, 0, "01c5", true, "00410455106610551554155415541004");
+
 const start = (filecontent) => {
   
   const elem = (tagName, props, ...children) => {
@@ -10,10 +72,21 @@ const start = (filecontent) => {
   const result = document.getElementById("result");
   const autorun = document.getElementById("autorun");
   const url = window.location.href.split('?')[0];
+
+
   
+  let canvas;
+  let ctx;
   let module;
   const runLua = () => {
-    result.replaceChildren(elem("pre", { className: "output" }));
+    canvas = elem("canvas", {});
+    result.replaceChildren(canvas, elem("pre", { className: "output" }));
+    canvas.width = 800;
+    canvas.height = 600;
+    ctx = canvas.getContext("2d");
+    ctx.setTransform(4, 0, 0, 4, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(offcanvas, 0, 0, 8, 8, 16, 16, 8, 8);
     const str = editor.value;
     module.ccall("run_lua", "number", ["string", "string"], [luarun, str]);
   };
