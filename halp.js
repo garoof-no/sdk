@@ -69,7 +69,6 @@ const rendersprite = (ctx, dx, dy, palhex, transparent, sprhex) => {
 let canvas;
 let ctx;
 
-
 const offrender = () => {
   if (offready) {
     return;
@@ -285,8 +284,6 @@ const start = (filecontent) => {
     run.onclick = runLua;
   });
 };
-
-
 
 window.onload = () => {
   const defaultcode = `web.send("defsprite", "0 00410455106610551554155415541004")
