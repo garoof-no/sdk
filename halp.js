@@ -38,27 +38,50 @@ const fullpal =
     "#AB5236", "#5F574F", "#C2C3C7", "#FFF1E8",
     "#FF004D", "#FFA300", "#FFEC27", "#00E436",
     "#29ADFF", "#83769C", "#FF77A8", "#FFCCAA"];
+const pals = ["0123", "4567","89ab", "e9af"];
+
+const sprites = Array(32);
+sprites.fill("1b001b551baa1bff1b1b1b6e1bb91be4");
 
 const offcanvas = new OffscreenCanvas(256, 256);
 const offctx = offcanvas.getContext("2d");
 offctx.imageSmoothingEnabled = false;
+let offready = false;
 
-const rendersprite = (ctx, x, y, palhex, transparent, sprhex) => {
+const rendersprite = (ctx, dx, dy, palhex, transparent, sprhex) => {
   const pal = palfromhex(palhex);
   const data = datafromhex(sprhex);
-  ctx.clearRect(0, 0, 8, 8);
   data.forEach(
     (row, y) => row.forEach(
         (i, x) => {
           if (i > 0 || !transparent) {
             ctx.fillStyle = fullpal[pal[i]];
-            ctx.fillRect(x, y, 1, 1);
+            ctx.fillRect(dx + x, dy + y, 1, 1);
           }
         }
     ));
 };
 
-rendersprite(offctx, 0, 0, "01c5", true, "00410455106610551554155415541004");
+let canvas;
+let ctx;
+
+
+const offrender = () => {
+  if (offready) {
+    return;
+  }
+  for (let si = 0; si < 32; si++) {
+    for (let pi = 0; pi < 4; pi++) {
+      rendersprite(offctx, si * 8, pi * 8, pals[pi], true, sprites[si]);
+    }
+  }
+  offready = true;
+};
+
+const params = (str) => [... str.matchAll(/[^\s]+/g)].map(a => a[0]);
+
+
+
 
 const start = (filecontent) => {
   
@@ -72,11 +95,7 @@ const start = (filecontent) => {
   const result = document.getElementById("result");
   const autorun = document.getElementById("autorun");
   const url = window.location.href.split('?')[0];
-
-
   
-  let canvas;
-  let ctx;
   let module;
   const runLua = () => {
     canvas = elem("canvas", {});
@@ -86,7 +105,6 @@ const start = (filecontent) => {
     ctx = canvas.getContext("2d");
     ctx.setTransform(4, 0, 0, 4, 0, 0);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(offcanvas, 0, 0, 8, 8, 16, 16, 8, 8);
     const str = editor.value;
     module.ccall("run_lua", "number", ["string", "string"], [luarun, str]);
   };
@@ -170,6 +188,22 @@ const start = (filecontent) => {
           }
         };
         html(elem("div", {}, label, input));
+      } else if (code === "defsprite") {
+        const p = params(payload);
+        sprites[parseInt(p[0])] = p[1];
+        offready = false;
+      } else if (code === "defpal") {
+        const p = params(payload);
+        pals[parseInt(p[0])] = p[1];
+        offready = false;
+      } else if (code === "sprite") {
+        const par = params(payload);
+        offrender();
+        const s = parseInt(par[0]);
+        const p = parseInt(par[1]);
+        const x = parseInt(par[2]);
+        const y = parseInt(par[3]);
+        ctx.drawImage(offcanvas, s * 8, p * 8, 8, 8, x, y, 8, 8);
       } else {
         console.error(`unkown code sent from Lua. code: "%o". payload: %o`, code, payload);
       }
@@ -236,8 +270,22 @@ const start = (filecontent) => {
 
 
 window.onload = () => {
-  const defaultcode = `print(("hello"):rep(5))
-print("world")
+  const defaultcode = `web.send("defsprite", "0 00410455106610551554155415541004")
+web.send("defsprite", "1 65556555aaaa556555655565aaaa6555")
+web.send("defpal", "0 01c5")
+web.send("defpal", "1 0ea5")
+web.send("defpal", "2 0243")
+web.send("sprite", "0 0 16 16")
+web.send("sprite", "0 1 32 16")
+for x = 0, 6 do
+  web.send("sprite", "1 2 " .. x * 8 .. " 0")
+  web.send("sprite", "1 2 " .. x * 8 .. " 32")
+end
+
+for y = 0, 4 do
+  web.send("sprite", "1 2 0 " .. y * 8)
+  web.send("sprite", "1 2 48 " .. y * 8)
+end
 `
   const file = new URLSearchParams(location.search).get("file");
   if (file !== null) {
