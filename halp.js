@@ -199,11 +199,19 @@ const start = (filecontent) => {
       } else if (code === "sprite") {
         const par = params(payload);
         offrender();
+        const flip = par.length > 4 ? par[4] : "";
+        const flipx = flip === "x" || flip === "xy";
+        const flipy = flip === "y" || flip === "xy";
+        const fl1 = (i, b) => b ? -i - 8 : i;
         const s = parseInt(par[0]);
         const p = parseInt(par[1]);
-        const x = parseInt(par[2]);
-        const y = parseInt(par[3]);
+        const x = fl1(parseInt(par[2]), flipx);
+        const y = fl1(parseInt(par[3]), flipy);
+
+        const fl2 = (i, b) => b ? -i : i;
+        ctx.setTransform(fl2(4, flipx), 0, 0, fl2(4, flipy), 0, 0);
         ctx.drawImage(offcanvas, s * 8, p * 8, 8, 8, x, y, 8, 8);
+        //ctx.setTransform(4, 0, 0, 4, 0, 0);
       } else {
         console.error(`unkown code sent from Lua. code: "%o". payload: %o`, code, payload);
       }
@@ -276,7 +284,7 @@ web.send("defpal", "0 01c5")
 web.send("defpal", "1 0ea5")
 web.send("defpal", "2 0243")
 web.send("sprite", "0 0 16 16")
-web.send("sprite", "0 1 32 16")
+web.send("sprite", "0 1 32 16 x")
 for x = 0, 6 do
   web.send("sprite", "1 2 " .. x * 8 .. " 0")
   web.send("sprite", "1 2 " .. x * 8 .. " 32")
