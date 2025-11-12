@@ -32,16 +32,20 @@ const palfromhex = (str) => {
   return res;
 };
 
+const array = (len, gen) => Array(len).fill(0).map(gen);
+
+const hexes = "0123456789abcdef";
+const rhex = (len) => () => array(len, () => hexes[Math.trunc(Math.random() * 16)]).join("");
+
 const fullpal =
   [
     "#000000", "#1D2B53", "#7E2553", "#008751",
     "#AB5236", "#5F574F", "#C2C3C7", "#FFF1E8",
     "#FF004D", "#FFA300", "#FFEC27", "#00E436",
     "#29ADFF", "#83769C", "#FF77A8", "#FFCCAA"];
-const pals = ["0123", "4567","89ab", "e9af"];
 
-const sprites = Array(32);
-sprites.fill("1b001b551baa1bff1b1b1b6e1bb91be4");
+let pals;
+let sprites;
 
 const offcanvas = new OffscreenCanvas(256, 256);
 const offctx = offcanvas.getContext("2d");
@@ -81,7 +85,22 @@ const offrender = () => {
 const params = (str) => [... str.matchAll(/[^\s]+/g)].map(a => a[0]);
 
 
+let scale = 4;
+let flipx = null;
+let flipy = null;
 
+const flip = (fx, fy) => {
+  // if (fx === flipx && fy === flipy) return;
+  const f = (i, b) => b ? -i : i;
+  ctx.setTransform(f(4, fx), 0, 0, f(4, fy), 0, 0);
+  flipx = fx;
+  flipy = fy;
+};
+
+const draw = (s, p, x, y) => {
+  const f = (i, b) => b ? -i - 8 : i;
+  ctx.drawImage(offcanvas, s * 8, p * 8, 8, 8, f(x, flipx), f(y, flipy), 8, 8);
+};
 
 const start = (filecontent) => {
   
@@ -103,8 +122,11 @@ const start = (filecontent) => {
     canvas.width = 800;
     canvas.height = 600;
     ctx = canvas.getContext("2d");
-    ctx.setTransform(4, 0, 0, 4, 0, 0);
     ctx.imageSmoothingEnabled = false;
+    flip(false, false);
+    pals = array(4, rhex(4));
+    sprites = array(32, rhex(32));
+    offready = false;
     const str = editor.value;
     module.ccall("run_lua", "number", ["string", "string"], [luarun, str]);
   };
@@ -199,19 +221,8 @@ const start = (filecontent) => {
       } else if (code === "sprite") {
         const par = params(payload);
         offrender();
-        const flip = par.length > 4 ? par[4] : "";
-        const flipx = flip === "x" || flip === "xy";
-        const flipy = flip === "y" || flip === "xy";
-        const fl1 = (i, b) => b ? -i - 8 : i;
-        const s = parseInt(par[0]);
-        const p = parseInt(par[1]);
-        const x = fl1(parseInt(par[2]), flipx);
-        const y = fl1(parseInt(par[3]), flipy);
-
-        const fl2 = (i, b) => b ? -i : i;
-        ctx.setTransform(fl2(4, flipx), 0, 0, fl2(4, flipy), 0, 0);
-        ctx.drawImage(offcanvas, s * 8, p * 8, 8, 8, x, y, 8, 8);
-        //ctx.setTransform(4, 0, 0, 4, 0, 0);
+        flip(par[4] == "x" || par[4] == "xy", par[4] == "y" || par[4] == "xy");
+        draw(parseInt(par[0]), parseInt(par[1]), parseInt(par[2]), parseInt(par[3]));
       } else {
         console.error(`unkown code sent from Lua. code: "%o". payload: %o`, code, payload);
       }
@@ -283,6 +294,11 @@ web.send("defsprite", "1 65556555aaaa556555655565aaaa6555")
 web.send("defpal", "0 01c5")
 web.send("defpal", "1 0ea5")
 web.send("defpal", "2 0243")
+for x = 0, 12 do
+  for y = 0, 12 do
+    web.send("sprite", math.random(2, 31) .. " " .. math.random(0, 3) .. " " .. x * 8 .. " " .. y * 8)
+  end
+end
 web.send("sprite", "0 0 16 16")
 web.send("sprite", "0 1 32 16 x")
 for x = 0, 6 do
