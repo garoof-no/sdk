@@ -52,9 +52,10 @@ const offctx = offcanvas.getContext("2d");
 offctx.imageSmoothingEnabled = false;
 let offready = false;
 
-const rendersprite = (ctx, dx, dy, palhex, transparent, sprhex) => {
+const drawgfx = (ctx, dx, dy, palhex, sprhex) => {
   const pal = palfromhex(palhex);
   const data = datafromhex(sprhex);
+  const transparent = pal[0] === pal[1];
   data.forEach(
     (row, y) => row.forEach(
         (i, x) => {
@@ -75,7 +76,7 @@ const offrender = () => {
   }
   for (let si = 0; si < 32; si++) {
     for (let pi = 0; pi < 4; pi++) {
-      rendersprite(offctx, si * 8, pi * 8, pals[pi], true, sprites[si]);
+      drawgfx(offctx, si * 8, pi * 8, pals[pi], sprites[si]);
     }
   }
   offready = true;
@@ -209,7 +210,7 @@ const start = (filecontent) => {
           }
         };
         html(elem("div", {}, label, input));
-      } else if (code === "defsprite") {
+      } else if (code === "defgfx") {
         const p = params(payload);
         sprites[parseInt(p[0])] = p[1];
         offready = false;
@@ -217,7 +218,7 @@ const start = (filecontent) => {
         const p = params(payload);
         pals[parseInt(p[0])] = p[1];
         offready = false;
-      } else if (code === "sprite") {
+      } else if (code === "gfx") {
         const par = params(payload);
         offrender();
         flip(par[4] == "x" || par[4] == "xy", par[4] == "y" || par[4] == "xy");
@@ -286,26 +287,26 @@ const start = (filecontent) => {
 };
 
 window.onload = () => {
-  const defaultcode = `web.send("defsprite", "0 00410455106610551554155415541004")
-web.send("defsprite", "1 65556555aaaa556555655565aaaa6555")
-web.send("defpal", "0 01c5")
-web.send("defpal", "1 0ea5")
+  const defaultcode = `web.send("defgfx", "0 00410455106610551554155415541004")
+web.send("defgfx", "1 65556555aaaa556555655565aaaa6555")
+web.send("defpal", "0 11c5")
+web.send("defpal", "1 eea5")
 web.send("defpal", "2 0243")
 for x = 0, 12 do
   for y = 0, 12 do
-    web.send("sprite", math.random(2, 31) .. " " .. math.random(0, 3) .. " " .. x * 8 .. " " .. y * 8)
+    web.send("gfx", math.random(2, 31) .. " " .. math.random(0, 3) .. " " .. x * 8 .. " " .. y * 8)
   end
 end
-web.send("sprite", "0 0 16 16")
-web.send("sprite", "0 1 32 16 x")
+web.send("gfx", "0 0 16 16")
+web.send("gfx", "0 1 32 16 x")
 for x = 0, 6 do
-  web.send("sprite", "1 2 " .. x * 8 .. " 0")
-  web.send("sprite", "1 2 " .. x * 8 .. " 32")
+  web.send("gfx", "1 2 " .. x * 8 .. " 0")
+  web.send("gfx", "1 2 " .. x * 8 .. " 32")
 end
 
 for y = 0, 4 do
-  web.send("sprite", "1 2 0 " .. y * 8)
-  web.send("sprite", "1 2 48 " .. y * 8)
+  web.send("gfx", "1 2 0 " .. y * 8)
+  web.send("gfx", "1 2 48 " .. y * 8)
 end
 `
   const file = new URLSearchParams(location.search).get("file");
