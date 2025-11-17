@@ -52,6 +52,8 @@ const offctx = offcanvas.getContext("2d");
 offctx.imageSmoothingEnabled = false;
 let offready = false;
 
+
+
 const drawgfx = (ctx, dx, dy, palhex, sprhex) => {
   const pal = palfromhex(palhex);
   const data = datafromhex(sprhex);
@@ -69,11 +71,14 @@ const drawgfx = (ctx, dx, dy, palhex, sprhex) => {
 
 let canvas;
 let ctx;
+let map;
+let legend;
 
 const offrender = () => {
   if (offready) {
     return;
   }
+  offctx.clearRect(0, 0, 256, 256);
   for (let si = 0; si < 32; si++) {
     for (let pi = 0; pi < 4; pi++) {
       drawgfx(offctx, si * 8, pi * 8, pals[pi], sprites[si]);
@@ -117,6 +122,8 @@ const start = (filecontent) => {
   
   let module;
   const runLua = () => {
+    map = [];
+    legend = new Map();
     canvas = elem("canvas", {});
     result.replaceChildren(canvas, elem("pre", { className: "output" }));
     canvas.width = 800;
@@ -223,6 +230,21 @@ const start = (filecontent) => {
         offrender();
         flip(par[4] == "x" || par[4] == "xy", par[4] == "y" || par[4] == "xy");
         draw(parseInt(par[0]), parseInt(par[1]), parseInt(par[2]), parseInt(par[3]));
+      } else if (code === "legend") {
+        const p = params(payload.substring(1));
+        legend.set(payload[0], { gfxnum: parseInt(p[0]), palnum: parseInt(p[1]) });
+      } else if (code === "row") {
+        map.push(payload.split(""));
+      } else if (code === "map") {
+        flip(false, false);
+        map.forEach((row, y) => row.forEach((c, x) => {
+          if (legend.has(c)) {
+            const o = legend.get(c);
+            draw(o.gfxnum, o.palnum, x * 8, y * 8);
+          } else {
+            ctx.clearRect(x * 8, y * 8, 8, 8);
+          }
+        }));
       } else {
         console.error(`unkown code sent from Lua. code: "%o". payload: %o`, code, payload);
       }
@@ -258,6 +280,18 @@ const start = (filecontent) => {
       local prev = web.co
       web.co = nil
       coroutine.resume(prev, thunk);
+    end,
+    defgfx = function(num, gfx)
+      send("defgfx", num .. " " .. gfx)
+    end,
+    defpal = function(num, pal)
+      send("defpal", num .. " " .. pal)
+    end,
+    legend = function(c, gi, pi)
+      send("legend", c .. " " .. gi .. " " .. pi)
+    end,
+    row = function(str)
+      send("row", str)
     end
   }
   local Web = {}
@@ -287,27 +321,35 @@ const start = (filecontent) => {
 };
 
 window.onload = () => {
-  const defaultcode = `web.send("defgfx", "0 00410455106610551554155415541004")
-web.send("defgfx", "1 65556555aaaa556555655565aaaa6555")
-web.send("defpal", "0 11c5")
-web.send("defpal", "1 eea5")
-web.send("defpal", "2 0243")
+  const defaultcode = `web.defgfx(0, "00410455106610551554155415541004")
+web.defgfx(1, "10004010400400040000004001000100");
+web.defgfx(2, "65556555aaaa556555655565aaaa6555")
+web.defpal(0, "11c5")
+web.defpal(1, "eea5")
+web.defpal(2, "3b14")
+web.defpal(3, "0243")
+web.legend(" ", 1, 2)
+web.legend("#", 2, 3)
+
+
+web.row("  #####    ")
+web.row("  #   #####")
+web.row("###       #")
+web.row("#         #")
+web.row("#####   ###")
+web.row("    #   #  ")
+web.row("    #####  ")
+
 for x = 0, 12 do
   for y = 0, 12 do
     web.send("gfx", math.random(2, 31) .. " " .. math.random(0, 3) .. " " .. x * 8 .. " " .. y * 8)
   end
 end
+
+web.send("map")
+
 web.send("gfx", "0 0 16 16")
 web.send("gfx", "0 1 32 16 x")
-for x = 0, 6 do
-  web.send("gfx", "1 2 " .. x * 8 .. " 0")
-  web.send("gfx", "1 2 " .. x * 8 .. " 32")
-end
-
-for y = 0, 4 do
-  web.send("gfx", "1 2 0 " .. y * 8)
-  web.send("gfx", "1 2 48 " .. y * 8)
-end
 `
   const file = new URLSearchParams(location.search).get("file");
   if (file !== null) {
