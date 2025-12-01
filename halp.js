@@ -52,8 +52,6 @@ const offctx = offcanvas.getContext("2d");
 offctx.imageSmoothingEnabled = false;
 let offready = false;
 
-
-
 const drawgfx = (ctx, dx, dy, palhex, sprhex) => {
   const pal = palfromhex(palhex);
   const data = datafromhex(sprhex);
@@ -122,6 +120,7 @@ const start = (filecontent) => {
   
   let module;
   const runLua = () => {
+    clearTimeout(yieldTimer);
     map = [];
     legend = new Map();
     canvas = elem("canvas", {});
@@ -137,7 +136,7 @@ const start = (filecontent) => {
     const str = editor.value;
     module.ccall("run_lua", "number", ["string", "string"], [luarun, str]);
   };
-
+  let yieldTimer;
   let timer;
   let dirty = true;
   const modified = (countdown) => {
@@ -245,6 +244,11 @@ const start = (filecontent) => {
             ctx.clearRect(x * 8, y * 8, 8, 8);
           }
         }));
+      } else if (code === "clear") { 
+        ctx.clearRect(0, 0, 800, 600);
+      } else if (code === "yield") {
+          const myrun = () => module.ccall("run_lua", "number", ["string", "string"], [luaresume, 'return "ok"']);
+          yieldTimer = setTimeout(myrun, 10);
       } else {
         console.error(`unkown code sent from Lua. code: "%o". payload: %o`, code, payload);
       }
@@ -292,6 +296,12 @@ const start = (filecontent) => {
     end,
     row = function(str)
       send("row", str)
+    end,
+    yield = function()
+      send("yield", "")
+      web.co = coroutine.running()
+      local thunk = coroutine.yield()
+      thunk()
     end
   }
   local Web = {}
