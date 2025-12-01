@@ -245,10 +245,11 @@ const start = (filecontent) => {
           }
         }));
       } else if (code === "clear") { 
-        ctx.clearRect(0, 0, 800, 600);
+        ctx.fillStyle = fullpal[parseInt(params(payload)[0])]
+        ctx.fillRect(0, 0, 800, 600);
       } else if (code === "yield") {
           const myrun = () => module.ccall("run_lua", "number", ["string", "string"], [luaresume, 'return "ok"']);
-          yieldTimer = setTimeout(myrun, 10);
+          yieldTimer = setTimeout(myrun, parseInt(params(payload)[0]));
       } else {
         console.error(`unkown code sent from Lua. code: "%o". payload: %o`, code, payload);
       }
@@ -297,8 +298,8 @@ const start = (filecontent) => {
     row = function(str)
       send("row", str)
     end,
-    yield = function()
-      send("yield", "")
+    yield = function(n)
+      send("yield", tostring(n))
       web.co = coroutine.running()
       local thunk = coroutine.yield()
       thunk()
