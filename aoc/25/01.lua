@@ -8,6 +8,7 @@ else
   fname = "input"
   web.file(fname)
   web.title("AoC-25-01")
+  web.html([[<p>See <a href="https://adventofcode.com/2025/day/1">Advent of Code 2025 - Day 1: Secret Entrance</a></p>]])
 end
 
 local f <close> = fname and io.open(fname)
