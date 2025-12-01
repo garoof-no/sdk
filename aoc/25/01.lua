@@ -1,6 +1,6 @@
 local fname
 if web then
-  web.title("AoC25,1")
+  web.title("AoC-25-01")
   fname = "input"
   web.file(fname)
 else
