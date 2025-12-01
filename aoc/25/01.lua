@@ -17,9 +17,9 @@ local function dial()
   local function step(n)
     current = (current + n) % 100
     if current == 0 then passes = passes + 1 end
-    local r = (current / 50) * math.pi
-    local x = 50 + (25 * math.sin(r))
-    local y = 50 + (25 * math.cos(r))
+    local r = ((current - 25) / 50) * math.pi
+    local y = 50 + (25 * math.sin(r))
+    local x = 50 + (25 * math.cos(r))
     web.send("clear")
     web.send("gfx", "0 0 " .. x .. " " .. y)
     web.yield()
