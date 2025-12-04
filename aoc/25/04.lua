@@ -94,7 +94,7 @@ local function solve(lines)
     return res
   end
 
-  local function check(map)
+  local function check()
     for p, v in pairs(map) do
       if v == "@" then
         local n = neighbours(map, p)
@@ -109,7 +109,7 @@ local function solve(lines)
     draw(100)
   end
 
-  local function remove(map, first)
+  local function remove(first)
     for p, v in pairs(map) do
       if v == "X" then
         map[p] = "."
@@ -122,13 +122,13 @@ local function solve(lines)
     end
     draw(100)
   end
-  check(map)
-  remove(map, true)
+  check()
+  remove(true)
   while true do
     local prev = res2
-    check(map)
+    check()
     if found == 0 then return res1, res2 end
-    remove(map)
+    remove()
   end
 end
 
