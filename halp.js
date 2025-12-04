@@ -292,6 +292,12 @@ const start = (filecontent) => {
     defpal = function(num, pal)
       send("defpal", num .. " " .. pal)
     end,
+    gfx = function(num, pal, x, y)
+      send("gfx", num .. " " .. pal .. " " .. x .. " " .. y)
+    end,
+    clear = function(colornum)
+      send("clear", tostring(colornum or 7))
+    end,
     legend = function(c, gi, pi)
       send("legend", c .. " " .. gi .. " " .. pi)
     end,

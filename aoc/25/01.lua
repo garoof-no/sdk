@@ -24,13 +24,12 @@ web.defgfx(6, "05501400500055505014501415500000")
 web.defgfx(7, "55545014005001400500050005000000")
 web.defgfx(8, "15505014501415505014501415500000")
 web.defgfx(9, "15505014501415540014005015400000")
-
 web.defgfx(10, "00410455106610551554155415541004")
 web.defpal(1, "11c5")
 
 local function num(n, x, y)
   for d in tostring(n):reverse():gmatch(".") do
-    web.send("gfx", tonumber(d) .. " 0 " .. x .. " " .. y)
+    web.gfx(d, 0, x, y)
     x = x - 8
   end
 end
@@ -43,8 +42,8 @@ local function dial()
     local r = ((current - 25) / 50) * math.pi
     local y = 40 + (32 * math.sin(r))
     local x = 40 + (32 * math.cos(r))
-    web.send("clear", "7")
-    web.send("gfx", "10 1 " .. x .. " " .. y)
+    web.clear(7)
+    web.gfx(10, 1, x, y)
     num(stops, 56, 88)
     num(passes, 56, 96)
     web.yield(10)
