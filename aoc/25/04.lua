@@ -8,7 +8,7 @@ else
   fname = "input"
   web.file(fname)
   web.title("AoC-25-04")
-  web.html([[<p>See <a href="https://adventofcode.com/2025/day/3">Advent of Code 2025 - Day 4: Printing Department</a>.</p>]])
+  web.html([[<p>See <a href="https://adventofcode.com/2025/day/4">Advent of Code 2025 - Day 4: Printing Department</a>.</p>]])
 end
 
 local f <close> = fname and io.open(fname)
