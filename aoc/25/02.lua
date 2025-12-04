@@ -13,43 +13,26 @@ end
 
 local f <close> = fname and io.open(fname)
 
-web.defpal(0, "70c5")
-web.defpal(1, "78c5")
-web.defgfx(0, "05401450501450145014145005400000")
-web.defgfx(1, "01400540154001400140014015540000")
-web.defgfx(2, "05501414001401500500141415540000")
-web.defgfx(3, "15540014005001500014141405500000")
-web.defgfx(4, "01500550145050505554005001540000")
-web.defgfx(5, "15541400140015500014141415500000")
-web.defgfx(6, "05501400500055505014501415500000")
-web.defgfx(7, "55545014005001400500050005000000")
-web.defgfx(8, "15505014501415505014501415500000")
-web.defgfx(9, "15505014501415540014005015400000")
-web.defgfx(10, "00410455106610551554155415541004")
-web.defpal(2, "11c5")
-
-local function drawnum(n, x, y)
-  for c in tostring(n):gmatch(".") do
-    web.gfx(c, 0, x, y)
-    x = x + 8
-  end
-end
+web.defpal(0, "11c5")
+web.defgfx(0, "00410455106610551554155415541004")
 
 local function solve(str)
-  web.clear()
   local res1, res2 = 0, 0
   local function invalid(s, repeats)
     local r = s:sub(1, #s // repeats):rep(repeats)
     local x, y1, y2 = 8, 8, 16
+    web.clear()
+    web.string(res1, 0, 8, 24)
+    web.string(res2, 0, 8, 32)
     for i = 1, math.max(#s, #r) do
       local a, b = s:sub(i, i), r:sub(i, i)
       local pal = a == b and 0 or 1
-      web.gfx(a, pal, x, y1)
-      web.gfx(b == "" and 10 or b, pal, x, y2)
+      web.string(a, pal, x, y1)
+      web.string(b, pal, x, y2)
       x = x + 8
     end
-    web.gfx(10, 2, x, y1)
-    web.gfx(10, 2, x, y2)
+    web.gfx(0, 0, x, y1)
+    web.gfx(0, 0, x, y2)
     web.yield(0)
     return s == r
   end
@@ -66,21 +49,24 @@ local function solve(str)
     for n = a, b do
       local s = tostring(n)
       local r1 = invalid(s, 2)
-      web.gfx(10, r1 and 0 or 1, 0, 24)
       if r1 then
+        web.gfx(0, 0, 0, 24)
         res1 = res1 + n
-        drawnum(res1, 8, 24)
         web.yield(200)
       end
       local r2 = invalid2(s)
-      web.gfx(10, r2 and 0 or 1, 0, 32)
       if invalid2(s) then
+        web.gfx(0, 0, 0, 32)
         res2 = res2 + n
-        drawnum(res2, 8, 32)
         web.yield(200)
       end
     end
   end
+  web.clear()
+  web.gfx(0, 0, 0, 24)
+  web.gfx(0, 0, 0, 32)
+  web.string(res1, 0, 8, 24)
+  web.string(res2, 0, 8, 32)
   return res1, res2
 end
 
