@@ -111,7 +111,6 @@ local function solve(lines)
   end
   check(map)
   remove(map, true)
-  print(res1)
   while true do
     local prev = res2
     check(map)
