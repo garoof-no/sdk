@@ -13,6 +13,13 @@ end
 
 local f <close> = fname and io.open(fname)
 
+web.defpal(0, "eed5")
+web.defgfx(0, "00410455106610551554155415541004")
+web.clear()
+web.string("no fun animate", 0, 40, 40)
+web.string("but here's a pink cat", 0, 16, 48)
+web.gfx(0, 0, 88, 64)
+
 local memory = { {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {} }
 
 local function largest(line, n)
