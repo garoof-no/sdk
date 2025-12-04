@@ -523,8 +523,18 @@ const start = (filecontent) => {
       } else if (code === "legend") {
         const p = params(payload.substring(1));
         legend.set(payload[0], { gfxnum: parseInt(p[0]), palnum: parseInt(p[1]) });
+      } else if (code === "newmap") {
+        map = [];
       } else if (code === "row") {
         map.push(payload.split(""));
+      } else if (code === "mapset") {
+        const par = params(payload);
+        const x = parseInt(par[0]);
+        const y = parseInt(par[1]);
+        const c = par[2];
+        if (y < map.length && x < map[y].length) {
+          map[y][x] = c;
+        }
       } else if (code === "map") {
         offrender();
         flip(false, false);
@@ -540,7 +550,10 @@ const start = (filecontent) => {
         ctx.fillStyle = fullpal[parseInt(params(payload)[0])]
         ctx.fillRect(0, 0, 800, 600);
       } else if (code === "yield") {
-          const myrun = () => module.ccall("run_lua", "number", ["string", "string"], [luaresume, 'return "ok"']);
+          const myrun = () => {
+             console.log("resuming");
+             module.ccall("run_lua", "number", ["string", "string"], [luaresume, 'return "ok"']);
+           }
           yieldTimer = setTimeout(myrun, parseInt(params(payload)[0]));
       } else {
         console.error(`unkown code sent from Lua. code: "%o". payload: %o`, code, payload);
@@ -596,6 +609,9 @@ const start = (filecontent) => {
     row = function(str)
       send("row", str)
     end,
+    mapset = function(x, y, c)
+      web.send("mapset", x .. " " .. y .. " " .. c)
+    end,
     string = function(str, pal, x, y, ltr)
       str = tostring(str)
       local moveby
@@ -645,7 +661,7 @@ const start = (filecontent) => {
 
 window.onload = () => {
   const defaultcode = `web.defgfx(0, "00410455106610551554155415541004")
-web.defgfx(1, "10004010400400040000004001000100");
+web.defgfx(1, "10004010400400040000004001000100")
 web.defgfx(2, "65556555aaaa556555655565aaaa6555")
 web.defpal(0, "11c5")
 web.defpal(1, "eea5")

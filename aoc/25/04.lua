@@ -16,6 +16,16 @@ local f <close> = fname and io.open(fname)
 vecs = setmetatable({}, { __mode = "v" })
 Vec = {}
 
+web.defpal(0, "31c5")
+web.defgfx(0, "00410455106610551554155415541004")
+web.defpal(1, "3000")
+web.defgfx(1, "00000000000000000000000000000000")
+web.defpal(2, "0243")
+web.defgfx(2, "65556555aaaa556555655565aaaa6555")
+web.legend(".", 1, 1)
+web.legend("@", 0, 0)
+web.legend("X", 2, 2)
+
 function vec(x, y)
   local key = x .. "," .. y
   local found = vecs[key]
@@ -35,75 +45,78 @@ NW.name = "NW" ; NE.name = "NE" ; SE.name = "SE" ; SW.name = "SW"
 dirs = { NW, N, NE, E, SE, S, SW, W }
 
 function mappy(lines)
+  web.newmap()
   local map = {}
-  local w = 1
   local y = 0
   for line in lines do
-    y = y + 1
+    web.row(line)
     local x = 0
     for c in line:gmatch(".") do
-      x = x + 1
       map[vec(x, y)] = c
+      x = x + 1
     end
-    w = math.max(w, x)
+    y = y + 1
   end
-  return map, vec(w, y)
-end
-
-function printmap(map, size)
-  print(size)
-  for y = 1, size.y do
-    for x = 1, size.x do
-      io.write(map[vec(x, y)] or " ")
-    end
-    io.write("\n")
-  end
-end
-
-local function neighbours(map, p)
-  local res = {}
-  for _, d in ipairs(dirs) do
-    local newp = p + d
-    if map[newp] == "@" or map[newp] == "X" then res[#res + 1] = p end
-  end
-  return res
-end
-
-local function check(map)
-  for p, v in pairs(map) do
-    if v == "@" then
-      local n = neighbours(map, p)
-      if #n < 4 then
-        map[p] = "X"
-      end
-    end
-  end
-end
-
-local function remove(map)
-  local res = 0 
-  for p, v in pairs(map) do
-    if v == "X" then
-      map[p] = "."
-      res = res + 1
-    end
-  end
-  return res
+  return map
 end
 
 local function solve(lines)
-  local map, size = mappy(lines)
-  local res1, res2
+  local res1, res2 = 0, 0
+  local found = 0
+  local map = mappy(lines)
+  
+  local function draw()
+    web.clear()
+    web.map()
+    web.string("Found: " .. found, 3, 8, 120)
+    web.string("First: " .. res1, 3, 8, 128)
+    web.string("Total: " .. res2, 3, 8, 136)
+    web.yield(100)
+  end
+
+  local function neighbours(map, p)
+    local res = {}
+    for _, d in ipairs(dirs) do
+      local newp = p + d
+      if map[newp] == "@" or map[newp] == "X" then res[#res + 1] = p end
+    end
+    return res
+  end
+
+  local function check(map)
+    for p, v in pairs(map) do
+      if v == "@" then
+        local n = neighbours(map, p)
+        if #n < 4 then
+          map[p] = "X"
+          found = found + 1
+          web.mapset(p.x, p.y, "X")
+          draw()
+        end
+      end
+    end
+  end
+
+  local function remove(map, first)
+    for p, v in pairs(map) do
+      if v == "X" then
+        map[p] = "."
+        found = found - 1
+        if first then res1 = res1 + 1 end
+        res2 = res2 + 1
+        web.mapset(p.x, p.y, ".")
+        draw()
+      end
+    end
+  end
   check(map)
-  res1 = remove(map)
-  res2 = res1
+  remove(map, true)
   print(res1)
   while true do
-    local r
+    local prev = res2
     check(map)
-    r = remove(map)
-    res2 = res2 + r 
-    if r == 0 then return res1, res2 end
+    remove(map)
+    if res2 == prev then return res1, res2 end
   end
 end
 
@@ -121,7 +134,7 @@ local examplestr = [[
 ]]
 
 print("with example:")
-  print(solve(examplestr:gmatch("[^\n]+")))
+print(solve(examplestr:gmatch("[^\n]+")))
 
 if f then
   print("\nwith file input:")
