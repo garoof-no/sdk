@@ -127,8 +127,8 @@ local function solve(lines)
   while true do
     local prev = res2
     check(map)
+    if found == 0 then return res1, res2 end
     remove(map)
-    if res2 == prev then return res1, res2 end
   end
 end
 

@@ -372,16 +372,20 @@ const offrender = () => {
 
 const params = (str) => [... str.matchAll(/[^\s]+/g)].map(a => a[0]);
 
-let scale = 4;
+let scale = null;
 let flipx = null;
 let flipy = null;
 
+const transform = () => {
+  const f = (i, b) => b ? -i : i;
+  ctx.setTransform(f(scale, flipx), 0, 0, f(scale, flipy), 0, 0);
+};
+
 const flip = (fx, fy) => {
   // if (fx === flipx && fy === flipy) return;
-  const f = (i, b) => b ? -i : i;
-  ctx.setTransform(f(scale, fx), 0, 0, f(scale, fy), 0, 0);
   flipx = fx;
   flipy = fy;
+  transform();
 };
 
 const draw = (canvas, s, p, x, y) => {
@@ -415,6 +419,7 @@ const start = (filecontent) => {
     canvas.height = 600;
     ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
+    scale = 4;
     flip(false, false);
     pals = array(4, rhex(4));
     sprites = array(256, rhex(32));
@@ -549,9 +554,11 @@ const start = (filecontent) => {
             ctx.clearRect(x * 8, y * 8, 8, 8);
           }
         }));
-      } else if (code === "clear") { 
+      } else if (code === "clear") {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.fillStyle = fullpal[parseInt(params(payload)[0])]
         ctx.fillRect(0, 0, 800, 600);
+        transform();
       } else if (code === "yield") {
           const myrun = () => module.ccall("run_lua", "number", ["string", "string"], [luaresume, 'return "ok"']);
           yieldTimer = setTimeout(myrun, parseInt(params(payload)[0]));
