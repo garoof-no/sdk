@@ -379,7 +379,7 @@ let flipy = null;
 const flip = (fx, fy) => {
   // if (fx === flipx && fy === flipy) return;
   const f = (i, b) => b ? -i : i;
-  ctx.setTransform(f(4, fx), 0, 0, f(4, fy), 0, 0);
+  ctx.setTransform(f(scale, fx), 0, 0, f(scale, fy), 0, 0);
   flipx = fx;
   flipy = fy;
 };
@@ -502,6 +502,9 @@ const start = (filecontent) => {
           }
         };
         html(elem("div", {}, label, input));
+      } else if (code === "scale") {
+        scale = parseFloat(payload);
+        flip(flipx, flipy);
       } else if (code === "defgfx") {
         const p = params(payload);
         sprites[parseInt(p[0])] = p[1];
@@ -550,10 +553,7 @@ const start = (filecontent) => {
         ctx.fillStyle = fullpal[parseInt(params(payload)[0])]
         ctx.fillRect(0, 0, 800, 600);
       } else if (code === "yield") {
-          const myrun = () => {
-             console.log("resuming");
-             module.ccall("run_lua", "number", ["string", "string"], [luaresume, 'return "ok"']);
-           }
+          const myrun = () => module.ccall("run_lua", "number", ["string", "string"], [luaresume, 'return "ok"']);
           yieldTimer = setTimeout(myrun, parseInt(params(payload)[0]));
       } else {
         console.error(`unkown code sent from Lua. code: "%o". payload: %o`, code, payload);
@@ -590,6 +590,9 @@ const start = (filecontent) => {
       local prev = web.co
       web.co = nil
       coroutine.resume(prev, thunk);
+    end,
+    scale = function(num)
+      send("scale", tostring(num))
     end,
     defgfx = function(num, gfx)
       send("defgfx", num .. " " .. gfx)

@@ -48,6 +48,7 @@ function mappy(lines)
   web.newmap()
   local map = {}
   local y = 0
+  local w = 1
   for line in lines do
     web.row(line)
     local x = 0
@@ -55,23 +56,33 @@ function mappy(lines)
       map[vec(x, y)] = c
       x = x + 1
     end
+    w = math.max(w, x)
     y = y + 1
   end
-  return map
+  return map, vec(w, y)
 end
 
 local function solve(lines)
   local res1, res2 = 0, 0
   local found = 0
-  local map = mappy(lines)
+  local map, size = mappy(lines)
+  local scale = 8
+  while 8 * size.x * scale > 600 and 8 * size.y * scale > 600 do
+    scale = scale / 2
+  end
+  web.scale(scale)
+  local skip = size.x * size.y > 500
   
-  local function draw()
+  local function draw(timeout)
     web.clear()
     web.map()
-    web.string("Found: " .. found, 3, 8, 120)
-    web.string("First: " .. res1, 3, 8, 128)
-    web.string("Total: " .. res2, 3, 8, 136)
-    web.yield(100)
+    local y = (size.y * 8) + 8
+    web.string("Found: " .. found, 3, 8, y)
+    y = y + 8
+    web.string("First: " .. res1, 3, 8, y)
+    y = y + 8
+    web.string("Total: " .. res2, 3, 8, y)
+    web.yield(timeout)
   end
 
   local function neighbours(map, p)
@@ -91,10 +102,11 @@ local function solve(lines)
           map[p] = "X"
           found = found + 1
           web.mapset(p.x, p.y, "X")
-          draw()
+          if not skip then draw(50) end
         end
       end
     end
+    draw(100)
   end
 
   local function remove(map, first)
@@ -105,9 +117,10 @@ local function solve(lines)
         if first then res1 = res1 + 1 end
         res2 = res2 + 1
         web.mapset(p.x, p.y, ".")
-        draw()
+        if not skip then draw(50) end
       end
     end
+    draw(100)
   end
   check(map)
   remove(map, true)
