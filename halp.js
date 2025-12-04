@@ -52,7 +52,7 @@ const offctx = offcanvas.getContext("2d");
 offctx.imageSmoothingEnabled = false;
 let offready = false;
 
-const drawgfx = (ctx, dx, dy, palhex, sprhex) => {
+const drawgfx = (ctx, dx, dy, sprhex, palhex) => {
   const pal = palfromhex(palhex);
   const data = datafromhex(sprhex);
   const transparent = pal[0] === pal[1];
@@ -72,21 +72,40 @@ let ctx;
 let map;
 let legend;
 
+const palpos = i => {
+  if (i === 0) return { x: 0, y: 0 };
+  if (i === 1) return { x: 128, y: 0 };
+  if (i === 2) return { x: 0, y: 128 };
+  if (i === 3) return { x: 128, y: 128 };
+  throw(`palpos(${i})`);
+};
+
+const rendersheetpal = (sheet, pal, ctx, start) => {
+  let i = 0;
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      drawgfx(offctx, start.x + (x * 8), start.y + (y * 8), sheet[i], pal);
+      i++;
+    }
+  }
+};
+
+const rendersheet = (sheet, pals, ctx) => {
+  ctx.clearRect(0, 0, 256, 256);
+  for (let i = 0; i < 4; i++) {
+    rendersheetpal(sheet, pals[i], ctx, palpos(i));
+  }
+};
+
 const offrender = () => {
   if (offready) {
     return;
   }
-  offctx.clearRect(0, 0, 256, 256);
-  for (let si = 0; si < 32; si++) {
-    for (let pi = 0; pi < 4; pi++) {
-      drawgfx(offctx, si * 8, pi * 8, pals[pi], sprites[si]);
-    }
-  }
+  rendersheet(sprites, pals, offctx);
   offready = true;
 };
 
 const params = (str) => [... str.matchAll(/[^\s]+/g)].map(a => a[0]);
-
 
 let scale = 4;
 let flipx = null;
@@ -102,11 +121,13 @@ const flip = (fx, fy) => {
 
 const draw = (s, p, x, y) => {
   const f = (i, b) => b ? -i - 8 : i;
-  ctx.drawImage(offcanvas, s * 8, p * 8, 8, 8, f(x, flipx), f(y, flipy), 8, 8);
+  const ppos = palpos(p);
+  const col = s % 16;
+  const row = Math.trunc(s / 16);
+  ctx.drawImage(offcanvas, ppos.x + (col * 8), ppos.y + (row * 8), 8, 8, f(x, flipx), f(y, flipy), 8, 8);
 };
 
 const start = (filecontent) => {
-  
   const elem = (tagName, props, ...children) => {
     const el = Object.assign(document.createElement(tagName), props);
     el.replaceChildren(...children);
@@ -131,7 +152,7 @@ const start = (filecontent) => {
     ctx.imageSmoothingEnabled = false;
     flip(false, false);
     pals = array(4, rhex(4));
-    sprites = array(32, rhex(32));
+    sprites = array(256, rhex(32));
     offready = false;
     const str = editor.value;
     module.ccall("run_lua", "number", ["string", "string"], [luarun, str]);
@@ -235,6 +256,7 @@ const start = (filecontent) => {
       } else if (code === "row") {
         map.push(payload.split(""));
       } else if (code === "map") {
+        offrender();
         flip(false, false);
         map.forEach((row, y) => row.forEach((c, x) => {
           if (legend.has(c)) {
@@ -292,8 +314,8 @@ const start = (filecontent) => {
     defpal = function(num, pal)
       send("defpal", num .. " " .. pal)
     end,
-    gfx = function(num, pal, x, y)
-      send("gfx", num .. " " .. pal .. " " .. x .. " " .. y)
+    gfx = function(num, pal, x, y, flip)
+      send("gfx", num .. " " .. pal .. " " .. x .. " " .. y .. " " .. (flip or ""))
     end,
     clear = function(colornum)
       send("clear", tostring(colornum or 7))
@@ -359,14 +381,14 @@ web.row("    #####  ")
 
 for x = 0, 12 do
   for y = 0, 12 do
-    web.send("gfx", math.random(2, 31) .. " " .. math.random(0, 3) .. " " .. x * 8 .. " " .. y * 8)
+    web.send("gfx", math.random(2, 255) .. " " .. math.random(0, 3) .. " " .. x * 8 .. " " .. y * 8)
   end
 end
 
 web.send("map")
 
-web.send("gfx", "0 0 16 16")
-web.send("gfx", "0 1 32 16 x")
+web.gfx(0, 0, 32, 24)
+web.gfx(0, 1, 48, 24, "x")
 `
   const file = new URLSearchParams(location.search).get("file");
   if (file !== null) {
