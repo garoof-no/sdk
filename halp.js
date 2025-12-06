@@ -763,15 +763,15 @@ function Vec.__tostring(a) return a.x .. "," .. a.y end
 local N, E, S, W = vec(0, -1), vec(1, 0), vec(0, 1), vec(-1, 0)
 
 local str = [[
-           
-  #####    
-  #   #####
-###       #
-#         #
-#####   ###
-    #   #  
-    #####  
-           
+             
+   #####     
+   #   ##### 
+ ###       # 
+ #         # 
+ #####   ### 
+    #   #    
+    #####    
+             
 ]]
 
 local map = {}
@@ -788,8 +788,8 @@ end
 
 
 
-local cat1 = { p = vec(4, 3), flip = "" }
-local cat2 = { p = vec(6, 3), flip = "x" }
+local cat1 = { p = vec(5, 3), flip = "" }
+local cat2 = { p = vec(7, 3), flip = "x" }
 
 web.buttons(" W      I ")
 web.buttons("ASD    JKL")
