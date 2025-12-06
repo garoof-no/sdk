@@ -259,7 +259,19 @@ const fontsprites = [
 
 const fontpals = ["0000", "8888", "7777", "7000"];
 
-const hexstr = (str) => str.length % 2 == 0 ? str : `${str}0`;
+const fullpal =
+  [
+    "#000000", "#1D2B53", "#7E2553", "#008751",
+    "#AB5236", "#5F574F", "#C2C3C7", "#FFF1E8",
+    "#FF004D", "#FFA300", "#FFEC27", "#00E436",
+    "#29ADFF", "#83769C", "#FF77A8", "#FFCCAA"];
+
+const hexchars = new Set("0123456789abcdefABCDEF");
+
+const hexstr = (str) => {
+  const res = str.split("").filter(c => hexchars.has(c)).join("");
+  return res.length % 2 == 0 ? res : `${res}0`;
+}
 
 const datafromhex = (str) => {
   const a = Uint8Array.fromHex(hexstr(str));
@@ -298,44 +310,6 @@ const array = (len, gen) => Array(len).fill(0).map(gen);
 const hexes = "0123456789abcdef";
 const rhex = (len) => () => array(len, () => hexes[Math.trunc(Math.random() * 16)]).join("");
 
-const fullpal =
-  [
-    "#000000", "#1D2B53", "#7E2553", "#008751",
-    "#AB5236", "#5F574F", "#C2C3C7", "#FFF1E8",
-    "#FF004D", "#FFA300", "#FFEC27", "#00E436",
-    "#29ADFF", "#83769C", "#FF77A8", "#FFCCAA"];
-
-let pals;
-let sprites;
-
-const offcanvas = new OffscreenCanvas(256, 256);
-const offctx = offcanvas.getContext("2d");
-offctx.imageSmoothingEnabled = false;
-const fontcanvas = new OffscreenCanvas(256, 256);
-const fontctx = fontcanvas.getContext("2d");
-fontcanvas.imageSmoothingEnabled = false;
-fontctx.imageSmoothingEnabled = false;
-
-const drawgfx = (ctx, dx, dy, sprhex, palhex) => {
-  const pal = palfromhex(palhex);
-  const data = datafromhex(sprhex);
-  const transparent = pal[0] === pal[1];
-  data.forEach(
-    (row, y) => row.forEach(
-        (i, x) => {
-          if (i > 0 || !transparent) {
-            ctx.fillStyle = fullpal[pal[i]];
-            ctx.fillRect(dx + x, dy + y, 1, 1);
-          }
-        }
-    ));
-};
-
-let canvas;
-let ctx;
-let map;
-let legend;
-
 const palpos = i => {
   if (i === 0) return { x: 0, y: 0 };
   if (i === 1) return { x: 128, y: 0 };
@@ -344,37 +318,7 @@ const palpos = i => {
   throw(`palpos(${i})`);
 };
 
-const rendersheetpal = (sheet, pal, ctx, start) => {
-  let i = 0;
-  for (let y = 0; y < 16; y++) {
-    for (let x = 0; x < 16; x++) {
-      drawgfx(ctx, start.x + (x * 8), start.y + (y * 8), sheet[i], pal);
-      i++;
-    }
-  }
-};
-
-const rendersheet = (sheet, pals, ctx) => {
-  ctx.clearRect(0, 0, 256, 256);
-  for (let i = 0; i < 4; i++) {
-    rendersheetpal(sheet, pals[i], ctx, palpos(i));
-  }
-};
-
-const offrender = () => {
-  if (offready) {
-    return;
-  }
-  rendersheet(sprites, pals, offctx);
-  rendersheet(fontsprites, fontpals, fontctx);
-  offready = true;
-};
-
 const params = (str) => [... str.matchAll(/[^\s]+/g)].map(a => a[0]);
-
-let scale = null;
-let flipx = null;
-let flipy = null;
 
 const transform = () => {
   const f = (i, b) => b ? -i : i;
@@ -388,13 +332,93 @@ const flip = (fx, fy) => {
   transform();
 };
 
-const draw = (canvas, s, p, x, y) => {
-  const f = (i, b) => b ? -i - 8 : i;
-  const ppos = palpos(p);
-  const col = s % 16;
-  const row = Math.trunc(s / 16);
-  ctx.drawImage(canvas, ppos.x + (col * 8), ppos.y + (row * 8), 8, 8, f(x, flipx), f(y, flipy), 8, 8);
-};
+class Sheet {
+  constructor() {
+    this.sprites = array(256, rhex(32));
+    this.pals = Array(16).fill(0);
+    for (let i = 0; i < 4; i++) {
+      this.defpal(i, rhex(4)());
+    }
+    this.canvas = new OffscreenCanvas(256, 256);
+    this.ctx = this.canvas.getContext("2d");
+    this.ctx.imageSmoothingEnabled = false;
+    this.dirty = true;
+  }
+  defpal(i, hex) {
+    while (i < 16) {
+      this.pals[i] = hexstr(hex);
+      i += 4;
+    }
+    this.dirty = true;
+  }
+  defgfx(i, hex) {
+    this.sprites[i] = hexstr(hex);
+    this.dirty = true;
+  }
+
+  gfxrender(dx, dy, s, p) {
+    const pal = palfromhex(this.pals[p]);
+    const data = datafromhex(this.sprites[s]);
+    const transparent = pal[0] === pal[1];
+    data.forEach(
+      (row, y) => row.forEach(
+        (i, x) => {
+          if (i > 0 || !transparent) {
+            this.ctx.fillStyle = fullpal[pal[i]];
+            this.ctx.fillRect(dx + x, dy + y, 1, 1);
+          }
+        }
+    ));
+  }
+
+  palrender(p, start) {
+    let i = 0;
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const pal = p + Math.trunc(i / 64) * 4;
+        this.gfxrender(start.x + (x * 8), start.y + (y * 8), i, pal);
+        i++;
+      }
+    }
+  }
+
+  prerender() {
+    if (!this.dirty) {
+      return;
+    }
+    this.ctx.clearRect(0, 0, 256, 256);
+    for (let i = 0; i < 4; i++) {
+      this.palrender(i, palpos(i));
+    }
+    this.dirty = false;
+  };
+  
+  draw(s, p, x, y) {
+    this.prerender();
+    const f = (i, b) => b ? -i - 8 : i;
+    const ppos = palpos(p);
+    const col = s % 16;
+    const row = Math.trunc(s / 16);
+    ctx.drawImage(this.canvas, ppos.x + (col * 8), ppos.y + (row * 8), 8, 8, f(x, flipx), f(y, flipy), 8, 8);
+  }
+  debugshow() {
+    this.prerender();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, 800, 600);
+    ctx.drawImage(this.canvas, 0, 0);
+    transform();
+  }
+}
+
+let sprites;
+let fonts;
+let canvas;
+let ctx;
+let map;
+let legend;
+let scale;
+let flipx;
+let flipy;
 
 const start = (filecontent) => {
   const elem = (tagName, props, ...children) => {
@@ -421,9 +445,10 @@ const start = (filecontent) => {
     ctx.imageSmoothingEnabled = false;
     scale = 4;
     flip(false, false);
-    pals = array(4, rhex(4));
-    sprites = array(256, rhex(32));
-    offready = false;
+    fonts = new Sheet();
+    fontsprites.forEach((s, i) => fonts.defgfx(i, s));
+    fontpals.forEach((s, i) => fonts.defpal(i, s));
+    sprites = new Sheet();
     const str = editor.value;
     module.ccall("run_lua", "number", ["string", "string"], [luarun, str]);
   };
@@ -512,22 +537,18 @@ const start = (filecontent) => {
         flip(flipx, flipy);
       } else if (code === "defgfx") {
         const p = params(payload);
-        sprites[parseInt(p[0])] = p[1];
-        offready = false;
+        sprites.defgfx(parseInt(p[0]), p[1]);
       } else if (code === "defpal") {
         const p = params(payload);
-        pals[parseInt(p[0])] = p[1];
-        offready = false;
+        sprites.defpal(parseInt(p[0]), p[1]);
       } else if (code === "gfx") {
         const par = params(payload);
-        offrender();
         flip(par[4] == "x" || par[4] == "xy", par[4] == "y" || par[4] == "xy");
-        draw(offcanvas, parseInt(par[0]), parseInt(par[1]), parseInt(par[2]), parseInt(par[3]));
+        sprites.draw(parseInt(par[0]), parseInt(par[1]), parseInt(par[2]), parseInt(par[3]));
       } else if (code === "letter") {
-        offrender();
         flip(false, false);
         const par = params(payload);
-        draw(fontcanvas, parseInt(par[0]), parseInt(par[1]), parseInt(par[2]), parseInt(par[3]));
+        fonts.draw(parseInt(par[0]), parseInt(par[1]), parseInt(par[2]), parseInt(par[3]));
       } else if (code === "legend") {
         const p = params(payload.substring(1));
         legend.set(payload[0], { gfxnum: parseInt(p[0]), palnum: parseInt(p[1]) });
@@ -544,12 +565,11 @@ const start = (filecontent) => {
           map[y][x] = c;
         }
       } else if (code === "map") {
-        offrender();
         flip(false, false);
         map.forEach((row, y) => row.forEach((c, x) => {
           if (legend.has(c)) {
             const o = legend.get(c);
-            draw(offcanvas, o.gfxnum, o.palnum, x * 8, y * 8);
+            sprites.draw(o.gfxnum, o.palnum, x * 8, y * 8);
           } else {
             ctx.clearRect(x * 8, y * 8, 8, 8);
           }
