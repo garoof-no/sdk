@@ -419,13 +419,42 @@ let legend;
 let scale;
 let flipx;
 let flipy;
+let buttons;
+let buttonchars;
+let button;
+
+const elem = (tagName, props, ...children) => {
+  const el = Object.assign(document.createElement(tagName), props);
+  el.replaceChildren(...children);
+  return el;
+};
+
+const addbuttons = (str) => {
+  const tr = buttons.appendChild(elem("tr"));
+  const chars = str.split("").map(c => c.toUpperCase());
+  chars.forEach(c => buttonchars.add(c));
+  const bs = chars.map(c => {
+    const td = tr.appendChild(elem("td", { className: "key"}));
+    if (c !== " ") {
+      td.appendChild(elem("button", { className: "key", onclick: () => button(c) }, c));
+    }
+  });
+};
+
+document.onkeypress = (e) => {
+  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") {
+    return;
+  }
+  if (e.ctrlKey || e.altKey || e.metaKey) {
+    return;
+  }
+  const c = e.key.toUpperCase();
+  if (buttonchars.has(c)) {
+    button(c);
+  }
+};
 
 const start = (filecontent) => {
-  const elem = (tagName, props, ...children) => {
-    const el = Object.assign(document.createElement(tagName), props);
-    el.replaceChildren(...children);
-    return el;
-  };
 
   const editor = document.getElementById("editor");
   const result = document.getElementById("result");
@@ -437,8 +466,11 @@ const start = (filecontent) => {
     clearTimeout(yieldTimer);
     map = [];
     legend = new Map();
-    canvas = elem("canvas", {});
-    result.replaceChildren(canvas, elem("pre", { className: "output" }));
+    canvas = elem("canvas");
+    buttons = elem("table", { className: "controls" });
+    buttonchars = new Set();
+    button = c => {};
+    result.replaceChildren(canvas, buttons, elem("pre", { className: "output" }));
     canvas.width = 800;
     canvas.height = 600;
     ctx = canvas.getContext("2d");
@@ -535,6 +567,13 @@ const start = (filecontent) => {
       } else if (code === "scale") {
         scale = parseFloat(payload);
         flip(flipx, flipy);
+      } else if (code === "buttons") {
+        addbuttons(payload);
+      } else if (code === "button") {
+        button = (c) => {
+           button = c => {};
+           module.ccall("run_lua", "number", ["string", "string"], [luaresume, `return "${c}"`]);
+        };
       } else if (code === "defgfx") {
         const p = params(payload);
         sprites.defgfx(parseInt(p[0]), p[1]);
@@ -640,7 +679,16 @@ const start = (filecontent) => {
       send("row", str)
     end,
     mapset = function(x, y, c)
-      web.send("mapset", x .. " " .. y .. " " .. c)
+      send("mapset", x .. " " .. y .. " " .. c)
+    end,
+    buttons = function(s)
+      send("buttons", s)
+    end,
+    button = function()
+      send("button", "")
+      web.co = coroutine.running()
+      local thunk = coroutine.yield()
+      return thunk()
     end,
     string = function(str, pal, x, y, ltr)
       str = tostring(str)
@@ -700,25 +748,79 @@ web.defpal(3, "0243")
 web.legend(" ", 1, 2)
 web.legend("#", 2, 3)
 
+vecs = setmetatable({}, { __mode = "v" })
+Vec = {}
+function vec(x, y)
+  local key = x .. "," .. y
+  local found = vecs[key]
+  if found then return found end
+  local v = setmetatable({ x = x, y = y}, Vec)
+  vecs[key] = v
+  return v
+end
+function Vec.__add(a, b) return vec(a.x + b.x, a.y + b.y) end
+function Vec.__tostring(a) return a.x .. "," .. a.y end
+local N, E, S, W = vec(0, -1), vec(1, 0), vec(0, 1), vec(-1, 0)
 
-web.row("  #####    ")
-web.row("  #   #####")
-web.row("###       #")
-web.row("#         #")
-web.row("#####   ###")
-web.row("    #   #  ")
-web.row("    #####  ")
+local str = [[
+           
+  #####    
+  #   #####
+###       #
+#         #
+#####   ###
+    #   #  
+    #####  
+           
+]]
 
-for x = 0, 12 do
-  for y = 0, 12 do
-    web.send("gfx", math.random(2, 255) .. " " .. math.random(0, 3) .. " " .. x * 8 .. " " .. y * 8)
+local map = {}
+local y = 0
+for line in str:gmatch("[^\\n]+") do
+  web.row(line)
+  local x = 0
+  for c in line:gmatch(".") do
+    map[vec(x, y)] = c
+    x = x + 1
   end
+  y = y + 1
 end
 
-web.send("map")
 
-web.gfx(0, 0, 32, 24)
-web.gfx(0, 1, 48, 24, "x")
+
+local cat1 = { p = vec(4, 3), flip = "" }
+local cat2 = { p = vec(6, 3), flip = "x" }
+
+web.buttons(" W      I ")
+web.buttons("ASD    JKL")
+
+local function move(cat, dir)
+  return function()
+    if dir == E then cat.flip = "" end
+    if dir == W then cat.flip = "x" end
+    local p = cat.p + dir
+    if p ~= cat1.p and p ~= cat2.p and map[p] ~= "#" then
+      cat.p = p
+    end
+  end
+end
+local commands = {
+  W = move(cat1, N),
+  A = move(cat1, W),
+  S = move(cat1, S),
+  D = move(cat1, E),
+  I = move(cat2, N),
+  J = move(cat2, W),
+  K = move(cat2, S),
+  L = move(cat2, E)
+}
+
+while true do
+  web.map()
+  web.gfx(0, 0, cat1.p.x * 8, cat1.p.y * 8, cat1.flip)
+  web.gfx(0, 1, cat2.p.x * 8, cat2.p.y * 8, cat2.flip)
+  commands[web.button()]()
+end
 `
   const file = new URLSearchParams(location.search).get("file");
   if (file !== null) {

@@ -39,9 +39,7 @@ function Vec.__add(a, b) return vec(a.x + b.x, a.y + b.y) end
 function Vec.__tostring(a) return a.x .. "," .. a.y end
 
 local N, E, S, W = vec(0, -1), vec(1, 0), vec(0, 1), vec(-1, 0)
-N.name = "N" ; E.name = "E" ; S.name = "S" ; W.name = "W"
 local NW, NE, SE, SW = N + W, N + E, S + E, S + W
-NW.name = "NW" ; NE.name = "NE" ; SE.name = "SE" ; SW.name = "SW"
 dirs = { NW, N, NE, E, SE, S, SW, W }
 
 function mappy(lines)
