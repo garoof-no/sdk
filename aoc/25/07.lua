@@ -28,7 +28,10 @@ local dark = 0
 web.defpal(dark, "0535")
 local light = 1
 web.defpal(light, "0a35")
+local green = 2
+web.defpal(green, "3535")
 web.legend(".", empty, dark)
+web.legend("g", empty, green)
 web.legend("S", cat, dark)
 web.legend("*", cat, light)
 web.legend("|", beam, light)
@@ -91,6 +94,9 @@ local function solve(lines)
     web.yield(timeout)
   end
 
+  draw(1000)
+  local smol = size.x * size.y < 500
+  local i = 0
   local results = {}
   local function p2(p)
     if results[p] then return results[p] end
@@ -101,6 +107,15 @@ local function solve(lines)
     if map[p] == "." then
       local r = p2(p + S)
       results[p] = r
+      res2 = "?" .. r .. "?"
+      web.mapset(p.x, p.y, "g")
+      i = i + 1
+      if smol then
+        draw(100)
+      elseif i == 10 then
+        draw(0)
+        i = 0
+      end
       return r
     end
     if map[p] == "^" then
