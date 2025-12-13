@@ -631,6 +631,8 @@ const start = (filecontent) => {
 
   const prelude = `
   local send = webSend
+  local gi = 0
+  local pi = 0
   webSend = nil
   web = {
     send = send,
@@ -661,10 +663,22 @@ const start = (filecontent) => {
       send("scale", tostring(num))
     end,
     defgfx = function(num, gfx)
+      if not gfx then
+        gfx = num
+        num = gi
+      end
       send("defgfx", num .. " " .. gfx)
+      gi = (num + 1) % 256
+      return num
     end,
     defpal = function(num, pal)
+      if not pal then
+        pal = num
+        num = pi
+      end
       send("defpal", num .. " " .. pal)
+      pi = (num + 1) % 4
+      return num
     end,
     gfx = function(num, pal, x, y, flip)
       send("gfx", num .. " " .. pal .. " " .. x .. " " .. y .. " " .. (flip or ""))
