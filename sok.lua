@@ -108,7 +108,7 @@ end
 local function drawcat(game)
   local p = game.cat.p
   local gfx = game.goals[p] and catg or cat
-  web.gfx(gfx, catp, p.x * 8, p.y * 8)
+  web.gfx(gfx, catp, p.x * 8, p.y * 8, game.cat.f)
 end
 
 local function drawmoves(game)
@@ -142,6 +142,8 @@ end
 local function move(game, dir, redo)
   return function()
     if won(game) then return end
+    if dir == W then game.cat.f = "x" end
+    if dir == E then game.cat.f = "" end
     local p = game.cat.p + dir
     local stuff = game.stuff[p]
     if stuff == "#" then return end
