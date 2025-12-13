@@ -46,8 +46,8 @@ function Vec.__tostring(a) return a.x .. "," .. a.y end
 local N, E, S, W = Vec(0, -1), Vec(1, 0), Vec(0, 1), Vec(-1, 0)
 
 local function read(lines)
-  local terrain = {}
-  local yarn = {}
+  local goals = {}
+  local stuff = {}
   local cat
   local y = 0
   local w = 0
@@ -57,22 +57,20 @@ local function read(lines)
     for c in line:gmatch(".") do
       x = x + 1
       local p = Vec(x, y)
-      if c == "." or c == "*" or c == "+" then terrain[p] = "." end
+      if c == "." or c == "*" or c == "+" then goals[p] = "." end
       if c == "@" or c == "+" then cat = p end
-      if c == "$" or c == "*" then yarn[p] = "$" end
-      if c == "#" then terrain[p] = "#" end
+      if c == "$" or c == "*" then stuff[p] = "$" end
+      if c == "#" then stuff[p] = "#" end
     end
     w = math.max(x, w)
   end
-  return { size = Vec(w, y), terrain = terrain, yarn = yarn, cat = cat }
+  return { size = Vec(w, y), goals = goals, stuff = stuff, cat = cat }
 end
 
 local function terraingfx(map, p)
-  local x = map.terrain[p]
-  if x == "#" then return wall, wallp
-  elseif x == "." then return goal, floorp
-  else return floor, floorp
-  end
+  if map.stuff[p] == "#" then return wall, wallp end
+  if map.goals[p] then return goal, floorp end
+  return floor, floorp
 end
 
 local map = read(level:gmatch("[^\n]*"))
@@ -88,17 +86,18 @@ end
 
 local function drawyarn(map)
   local pal = wallp
-  for p, _ in pairs(map.yarn) do
-    local gfx = map.terrain[p] == "." and yarng or yarn
-    web.gfx(gfx, pal, p.x * 8, p.y * 8)
+  for p, v in pairs(map.stuff) do
+    if v == "$" then
+      local gfx = map.goals[p] and yarng or yarn
+      web.gfx(gfx, pal, p.x * 8, p.y * 8)
+    end
   end
 end
 
 local function drawcat(map)
   local p = map.cat
-  local pal = catp
-  local gfx = map.terrain[p] and catg or cat
-  web.gfx(gfx, pal, p.x * 8, p.y * 8)
+  local gfx = map.goals[p] and catg or cat
+  web.gfx(gfx, catp, p.x * 8, p.y * 8)
 end
 
 web.buttons(" W ")
@@ -106,6 +105,15 @@ web.buttons("ASD")
 
 local function move(map, dir)
   return function()
+    local p = map.cat + dir
+    local stuff = map.stuff[p]
+    if stuff == "#" then return end
+    local np = p + dir
+    if stuff and map.stuff[np] then return end
+    if stuff then
+      map.stuff[p] = nil
+      map.stuff[np] = stuff
+    end
     map.cat = map.cat + dir
   end
 end
