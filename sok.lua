@@ -56,7 +56,7 @@ local function read(lines)
     local x = 0
     for c in line:gmatch(".") do
       x = x + 1
-      local p = vec(x, y)
+      local p = Vec(x, y)
       if c == "." or c == "*" or c == "+" then terrain[p] = "." end
       if c == "@" or c == "+" then cat = p end
       if c == "$" or c == "*" then yarn[p] = "$" end
@@ -64,7 +64,7 @@ local function read(lines)
     end
     w = math.max(x, w)
   end
-  return { size = vec(w, y), terrain = terrain, yarn = yarn, cat = cat }
+  return { size = Vec(w, y), terrain = terrain, yarn = yarn, cat = cat }
 end
 
 local function terraingfx(map, p)
@@ -80,7 +80,7 @@ local map = read(level:gmatch("[^\n]*"))
 local function drawterrain(map)
   for y = 1, map.size.y do
     for x = 1, map.size.x do
-      local gfx, pal = terraingfx(map, vec(x, y))
+      local gfx, pal = terraingfx(map, Vec(x, y))
       web.gfx(gfx, pal, x * 8, y * 8)
     end
   end
